@@ -1,6 +1,7 @@
 #include <WiFiS3.h>
 #include <WiFiSSLClient.h>
 #include <R4HttpClient.h>
+#define _UNNEEDED_RESPONSE_
 
 #include "main.h"
 
@@ -10,6 +11,8 @@ R4HttpClient http;
 
 #define SEND_STRING "<@" YOUR_DISCORD_USERID "> ドアの呼び出しが鳴りました！"
 #define PAYLOAD "{\"content\":\"" SEND_STRING "\"}"
+#define DISCORD_WEBHOOKPORT 443
+
 
 void setup() {
   Serial.begin(115200);
@@ -20,27 +23,27 @@ void setup() {
   pinMode(10,INPUT);
 }
 
-int cnt = 0;
+bool flag = false;
 
 void loop(){
-  delay(1000);
-  cnt++;
-  if(digitalRead(10)){
-    Serial.print(cnt);
+  bool read = digitalRead(10);
+  if(read && !flag){
     sendPostRequest();
+    flag = true;
   }
-  else{  
-    Serial.println(cnt);
+  else{
+    flag = read;
   }
+  delay(500);
 }
+
 
 void sendPostRequest() {
   http.begin(client, YOOUR_DISCORD_WEBHOOKURL, 443);
 
   http.addHeader("Content-Type: application/json");
   String payload = PAYLOAD;
-  Serial.println(" : sended1");
-  http.POST(payload);
+  http.sendRequest("POST", payload, true);
   http.close();
 }
 
