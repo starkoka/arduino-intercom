@@ -17,11 +17,6 @@ FspTimer _timer;
 void setup() {
   Serial.begin(115200);
   matrix.begin();
-  WiFi.begin(SSID, PASSWORD);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-  }
-  
   pinMode(SWITCH_PIN,INPUT);
   pinMode(SPEAKER_PIN,OUTPUT);
 
@@ -34,25 +29,16 @@ void setup() {
   _timer.setup_overflow_irq();
   _timer.open();
   _timer.start();
+
+  WiFi.begin(SSID, PASSWORD);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(100);
+  }
 }
 
 
 void loop(){
-  static bool flag = false;
-  bool read = digitalRead(SWITCH_PIN);
-  if(read && !flag){
-    matrixState = 1;
-    http.begin(client, YOOUR_DISCORD_WEBHOOKURL, 443);
-    http.addHeader("Content-Type: application/json");
-    String payload = PAYLOAD;
-    http.sendRequest("POST", payload, true);
-    http.close();
-    matrixState = 2;
-    flag = true;
-  }
-  else{
-    flag = read;
-  }
+  sendWebhook();
 }
 
 void matrixTimer(timer_callback_args_t *arg){
@@ -64,14 +50,13 @@ void matrixTimer(timer_callback_args_t *arg){
     beforeCK = ck;
   }
   unsigned long now = ck-beforeCK;
-  int number = ((ck-beforeCK)/5)%4;
 
   switch(matrixState){
     case 1:
-      matrix.loadFrame(animation[number + 5]);
+      matrix.loadFrame(animation[((ck-beforeCK)/5)%4 + 5]);
       break;
     case 2:   
-      matrix.loadFrame(animation[number + 1]);
+      matrix.loadFrame(animation[((ck-beforeCK)/5)%4 + 1]);
       if(now == 0){
         tone(SPEAKER_PIN,660,1000);
       }
@@ -89,15 +74,17 @@ void matrixTimer(timer_callback_args_t *arg){
   beforeState = matrixState;
 }
 
-
-void speaker(){
+void sendWebhook(){
   static bool flag = false;
   bool read = digitalRead(SWITCH_PIN);
   if(read && !flag){
-    tone(SPEAKER_PIN,660,1000); // ピン
-    delay(1000);
-    tone(SPEAKER_PIN,550,1000); // ポーン
-    delay(2000);
+    matrixState = 1;
+    http.begin(client, YOOUR_DISCORD_WEBHOOKURL, 443);
+    http.addHeader("Content-Type: application/json");
+    String payload = PAYLOAD;
+    http.sendRequest("POST", payload, true);
+    http.close();
+    matrixState = 2;
     flag = true;
   }
   else{
