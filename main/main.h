@@ -1,5 +1,3 @@
-#define SEND_STRING "<@" YOUR_DISCORD_USERID "> ドアの呼び出しが鳴りました！"
-#define PAYLOAD "{\"content\":\"" SEND_STRING "\"}"
 #define DISCORD_WEBHOOKPORT 443
 #define SWITCH_PIN 10
 #define SPEAKER_PIN 12

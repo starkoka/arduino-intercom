@@ -61,10 +61,34 @@ void loop() {
             client.println();
 
             // the content of the HTTP response follows the header:
-            client.print("<p style=\"font-size:20;\">Click <a href=\"/O\">here</a> display OK<br></p>");
-            client.print("<p style=\"font-size:20;\">Click <a href=\"/D\">here</a> display Dont't Entry<br></p>");
-            client.print("<p style=\"font-size:20;\">Click <a href=\"/C\">here</a> display NG<br></p>");
-            client.print("<p style=\"font-size:20;\">Click <a href=\"/W\">here</a> display WAIT<br></p>");
+            String now = "STANDBY";
+            if(matrixState == _STATE_OK_){
+              now = "OK";
+            }
+            else if(matrixState == _STATE_DONT_ENTRY_){
+              now = "Dont't entry";
+            }
+            else if(matrixState == _STATE_NG_){
+              now = "NG";
+            }
+            else if(matrixState == _STATE_WAIT_){
+              now = "WAIT"; 
+            }
+
+            client.print("<div style=\"font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: linear-gradient(135deg, #ece9e6, #ffffff);\">");
+            client.print("<h1 style=\"font-size: 2rem; margin-bottom: 20px;\">Status Selector</h1>");
+            client.print("<div id=\"currentStatus\" style=\"margin-bottom: 20px; padding: 10px 20px; font-size: 1.2rem; color: white; background-color: #333; border-radius: 5px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);\">Current Status : " + now + "</div>");
+            client.print("<div style=\"display: flex; gap: 10px;\">");
+            client.print("<a href=\"/O\" style=\"display: inline-block; text-decoration: none; padding: 15px 25px; font-size: 1rem; color: white; background-color: #28a745; border-radius: 5px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); transition: opacity 0.3s ease;\">OK</a>");
+            client.print("<a href=\"/D\" style=\"display: inline-block; text-decoration: none; padding: 15px 25px; font-size: 1rem; color: white; background-color: #007bff; border-radius: 5px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); transition: opacity 0.3s ease;\">Don't entry</a>");
+            client.print("<a href=\"/G\" style=\"display: inline-block; text-decoration: none; padding: 15px 25px; font-size: 1rem; color: white; background-color: #dc3545; border-radius: 5px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); transition: opacity 0.3s ease;\">NG</a>");
+            client.print("<a href=\"/W\" style=\"display: inline-block; text-decoration: none; padding: 15px 25px; font-size: 1rem; color: white; background-color: #ffc107; border-radius: 5px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); transition: opacity 0.3s ease;\">Wait</a>");
+            client.print("<a href=\"/C\" style=\"display: inline-block; text-decoration: none; padding: 15px 25px; font-size: 1rem; color: white; background-color: #6c757d; border-radius: 5px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); transition: opacity 0.3s ease;\">Clear</a>");
+            client.print("</div>");
+            client.print("</div>");
+
+
+
             
             // The HTTP response ends with another blank line:
             client.println();
@@ -84,11 +108,14 @@ void loop() {
         if (currentLine.endsWith("GET /D")) {
           matrixState = _STATE_DONT_ENTRY_;               // GET /L turns the LED off
         }
-        if (currentLine.endsWith("GET /C")) {
+        if (currentLine.endsWith("GET /G")) {
           matrixState = _STATE_NG_;              // GET /L turns the LED off
         }
         if (currentLine.endsWith("GET /W")) {
           matrixState = _STATE_WAIT_;              // GET /L turns the LED off
+        }
+        if (currentLine.endsWith("GET /C")) {
+          matrixState = _STATE_STANDBY_;              // GET /L turns the LED off
         }
       }
       
@@ -124,7 +151,7 @@ void matrixTimer(timer_callback_args_t *arg){
         tone(SPEAKER_PIN,660,1000);
       }
       else if(now == 10){
-        tone(SPEAKER_PIN,660,2000);
+        tone(SPEAKER_PIN,550,1000);
       }
       else if(now > 30){
         matrixState = _STATE_STANDBY_;
@@ -132,7 +159,7 @@ void matrixTimer(timer_callback_args_t *arg){
       break;
 
     default:
-      if(now > 100){
+      if(now > 3000){
         matrixState = _STATE_STANDBY_;
       }
       else{
@@ -143,6 +170,9 @@ void matrixTimer(timer_callback_args_t *arg){
   beforeState = matrixState;
 }
 
+#define SEND_STRING "<@" YOUR_DISCORD_USERID "> ドアの呼び出しが鳴りました！"
+#define PAYLOAD "{\"content\":\"" SEND_STRING "\"}"
+
 void sendWebhook(){
   static bool flag = false;
   bool read = digitalRead(SWITCH_PIN);
@@ -150,8 +180,12 @@ void sendWebhook(){
     matrixState = _STATE_POSTTING_;
     http.begin(client, YOOUR_DISCORD_WEBHOOKURL, 443);
     http.addHeader("Content-Type: application/json");
-    String payload = PAYLOAD;
-    http.sendRequest("POST", payload, true);
+    String payload1 = "{\"content\":\"<@";
+    String payload2 = YOUR_DISCORD_USERID;
+    String payload3 = "> ドアの呼び出しが鳴りました！[応答はこちら](http://";
+    String payload4 = WiFi.localIP().toString();
+    String payload5 = ")\"}";
+    http.sendRequest("POST", payload1 + payload2 + payload3 + payload4 + payload5, true);
     http.close();
     matrixState = _STATE_RINGING_;
     flag = true;
